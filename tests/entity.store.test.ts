@@ -29,4 +29,52 @@ describe('createEntityStore', () => {
     expect(store.getState().entity).toBeNull();
     expect(store.getState().loaded).toBe(false);
   });
+
+  it('should end loading when set lands', () => {
+    const store = createEntityStore<User>();
+    store.getState().setLoading(true);
+    store.getState().set({ id: 1, name: 'Alice' });
+    expect(store.getState().loading).toBe(false);
+    expect(store.getState().loaded).toBe(true);
+  });
+
+  it('should end loading when setError is called', () => {
+    const store = createEntityStore<User>();
+    store.getState().setLoading(true);
+    store.getState().setError('Could not load the user');
+    expect(store.getState().loading).toBe(false);
+    expect(store.getState().error).toBe('Could not load the user');
+  });
+
+  it('should accept nested partials when deepMerge is on', () => {
+    type Settings = {
+      ui: { theme: string; language: string };
+      flags: { beta: boolean };
+    };
+    const store = createEntityStore<Settings>({
+      deepMerge: true,
+      initialState: {
+        ui: { theme: 'light', language: 'en' },
+        flags: { beta: false },
+      },
+    });
+
+    // No cast: `update` is typed as DeepPartial<Settings> here.
+    store.getState().update({ ui: { theme: 'dark' } });
+
+    expect(store.getState().entity?.ui).toEqual({ theme: 'dark', language: 'en' });
+  });
+
+  it('should accept a middleware wrapper', () => {
+    let wrapped = false;
+    const store = createEntityStore<User>({
+      middleware: (config: any) => (set: any, get: any, api: any) => {
+        wrapped = true;
+        return config(set, get, api);
+      },
+    });
+    expect(wrapped).toBe(true);
+    store.getState().set({ id: 1, name: 'Alice' });
+    expect(store.getState().entity?.name).toBe('Alice');
+  });
 });

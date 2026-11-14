@@ -108,4 +108,54 @@ describe('createEntitiesStore', () => {
     store.getState().setLoading(false);
     expect(store.getState().loading).toBe(false);
   });
+
+  it('should end loading when replaceAll lands', () => {
+    const store = createEntitiesStore<Product>();
+    store.getState().setLoading(true);
+    store.getState().replaceAll([{ id: 1, name: 'Laptop' }]);
+    expect(store.getState().loading).toBe(false);
+    expect(store.getState().entities).toHaveLength(1);
+  });
+
+  it('should end loading when setError is called', () => {
+    const store = createEntitiesStore<Product>();
+    store.getState().setLoading(true);
+    store.getState().setError('Could not load products');
+    expect(store.getState().loading).toBe(false);
+    expect(store.getState().error).toBe('Could not load products');
+  });
+
+  it('should report an update on a missing id', () => {
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] });
+    store.getState().update(2, { name: 'Tablet' });
+    expect(store.getState().entities).toEqual([{ id: 1, name: 'Laptop' }]);
+    expect(store.getState().error).toMatch(/id=2 was not found/);
+  });
+
+  it('should report a delete on a missing id', () => {
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] });
+    store.getState().delete(2);
+    expect(store.getState().entities).toEqual([{ id: 1, name: 'Laptop' }]);
+    expect(store.getState().error).toMatch(/id=2 was not found/);
+  });
+
+  it('should use a custom id field in error messages', () => {
+    type User = { userId: string; name: string };
+    const store = createEntitiesStore<User, 'userId'>({ idKey: 'userId', initialState: [] });
+    store.getState().update('u1', { name: 'Alice' });
+    expect(store.getState().error).toMatch(/userId=u1 was not found/);
+  });
+
+  it('should accept a middleware wrapper', () => {
+    let wrapped = false;
+    const store = createEntitiesStore<Product>({
+      middleware: (config: any) => (set: any, get: any, api: any) => {
+        wrapped = true;
+        return config(set, get, api);
+      },
+    });
+    expect(wrapped).toBe(true);
+    store.getState().add({ id: 1, name: 'Laptop' });
+    expect(store.getState().entities).toHaveLength(1);
+  });
 });

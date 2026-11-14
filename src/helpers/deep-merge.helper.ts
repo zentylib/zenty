@@ -1,8 +1,19 @@
-export function deepMerge<T>(target: T, source: Partial<T>): T {
-  const output = { ...target };
-  Object.keys(source).forEach((key) => {
-    const sourceVal = source[key as keyof T];
-    const targetVal = target[key as keyof T];
+/** A partial that allows nested objects to be partial too. */
+export type DeepPartial<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends readonly unknown[]
+    ? T
+    : T extends Date | RegExp | Map<any, any> | Set<any>
+      ? T
+      : T extends object
+        ? { [K in keyof T]?: DeepPartial<T[K]> }
+        : T;
+
+export function deepMerge<T>(target: T, source: DeepPartial<T>): T {
+  const output: any = { ...target };
+  Object.keys(source as object).forEach((key) => {
+    const sourceVal = (source as any)[key];
+    const targetVal = (target as any)[key];
 
     if (
       sourceVal &&
@@ -12,10 +23,10 @@ export function deepMerge<T>(target: T, source: Partial<T>): T {
       typeof targetVal === 'object' &&
       !Array.isArray(targetVal)
     ) {
-      output[key as keyof T] = deepMerge(targetVal, sourceVal);
+      output[key] = deepMerge(targetVal, sourceVal);
     } else {
-      output[key as keyof T] = sourceVal as T[keyof T];
+      output[key] = sourceVal;
     }
   });
-  return output;
+  return output as T;
 }

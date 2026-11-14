@@ -1,15 +1,7 @@
-export type EntityStoreOptions<T> = {
-  initialState: T | null;
-  deepMerge?: boolean;
-};
-
-export type EntitiesStoreOptions<T extends { id: string | number }> = {
-  initialState?: T[];
-  add?: (item: T, state: { entities: T[] }) => T[];
-  addMany?: (items: T[], state: { entities: T[] }) => T[];
-  update?: (uid: string | number, item: Partial<T>, state: { entities: T[] }) => T[];
-  updateMany?: (items: Partial<T>[], state: { entities: T[] }) => T[];
-  delete?: (uid: string | number, state: { entities: T[] }) => T[];
-  deleteMany?: (uids: (string | number)[], state: { entities: T[] }) => T[];
-  clear?: (state: { entities: T[] }) => T[];
-};
+/**
+ * The option and state types live next to the store creators. This file only
+ * re-exports them so the two definitions can never drift apart.
+ */
+export type { EntityStoreOptions, EntityState, EntityActions, EntityPatch, EntityStore } from '../entity.store';
+export type { EntitiesStoreOptions } from '../entities.store';
+export type { ZentyMiddleware } from './middleware.types';

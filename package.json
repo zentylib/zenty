@@ -1,7 +1,7 @@
 {
   "name": "zenty",
-  "version": "1.0.10",
-  "description": "Zustand entity store for managing single and multiple entities",
+  "version": "1.1.0",
+  "description": "Type-safe CRUD stores for Zustand in one line",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -11,7 +11,7 @@
     "directory": "packages/zenty"
   },
   "bugs": {
-    "url": "https://github.com/zentilib/zenty/issues"
+    "url": "https://github.com/zentylib/zenty/issues"
   },
   "homepage": "https://zentylib.com",
   "exports": {

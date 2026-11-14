@@ -1,4 +1,5 @@
 import { create as zustandCreate, StoreApi, UseBoundStore } from 'zustand';
+import type { ZentyMiddleware } from './types/middleware.types';
 
 /**
  * All the customizable callbacks and initial data for the store.
@@ -20,6 +21,9 @@ export interface EntitiesStoreOptions<
     updateMany?: (patches: (Pick<T, K> & Partial<T>)[], state: EntitiesState<T, K>) => T[];
     delete?: (uid: T[K], state: EntitiesState<T, K>) => T[];
     deleteMany?: (uids: T[K][], state: EntitiesState<T, K>) => T[];
+
+    /** wrap the store, e.g. `(config) => devtools(config, { name: 'products' })` */
+    middleware?: ZentyMiddleware;
 }
 
 /** Internal shape of your store’s state */
@@ -73,97 +77,128 @@ export function createEntitiesStore(options: any = {}) {
         updateMany,
         delete: del,
         deleteMany,
+        middleware,
     } = options as EntitiesStoreOptions<any, any>;
 
-    return zustandCreate<EntitiesState<any, any> & EntitiesActions<any, any>>(
-        (set, get) => ({
-            // initial state
-            entities: initialState,
-            loaded: false,
-            loading: false,
-            error: null,
+    const initializer = (set: any, get: any) => ({
+        // initial state
+        entities: initialState,
+        loaded: false,
+        loading: false,
+        error: null,
 
-            setError: (error) => set({ error }),
-            setLoading: (loading) => set({ loading }),
+        setError: (error: string | null) => set({ error, loading: false }),
+        setLoading: (loading: boolean) => set({ loading }),
 
-            add: (item) =>
-                set((state) => ({
-                    entities: add
-                        ? add(item, state)
-                        : state.entities.some((e) => e[idKey] === item[idKey])
-                            ? state.entities
-                            : [...state.entities, item],
+        add: (item: any) =>
+            set((state: EntitiesState<any, any>) => {
+                if (add) {
+                    return { entities: add(item, state), loaded: true, loading: false, error: null };
+                }
+                if (state.entities.some((e) => e[idKey] === item[idKey])) {
+                    return {
+                        loaded: true,
+                        loading: false,
+                        error: `Item with ${String(idKey)}=${item[idKey]} already exists.`,
+                    };
+                }
+                return {
+                    entities: [...state.entities, item],
                     loaded: true,
-                    error: add
-                        ? null
-                        : state.entities.some((e) => e[idKey] === item[idKey])
-                            ? `Item with ${String(idKey)}=${item[idKey]} already exists.`
-                            : null,
-                })),
-
-            addMany: (items: any[]) =>
-                set((state) => ({
-                    entities: addMany
-                        ? addMany(items, state)
-                        : [...state.entities, ...items],
-                    loaded: true,
+                    loading: false,
                     error: null,
-                })),
+                };
+            }),
 
-            update: (uid, patch) =>
-                set((state) => ({
-                    entities: update
-                        ? update(uid, patch, state)
-                        : state.entities.map((e) =>
-                            e[idKey] === uid ? { ...e, ...patch } : e
-                        ),
+        addMany: (items: any[]) =>
+            set((state: EntitiesState<any, any>) => ({
+                entities: addMany
+                    ? addMany(items, state)
+                    : [...state.entities, ...items],
+                loaded: true,
+                loading: false,
+                error: null,
+            })),
+
+        update: (uid: any, patch: any) =>
+            set((state: EntitiesState<any, any>) => {
+                if (update) {
+                    return { entities: update(uid, patch, state), loading: false, error: null };
+                }
+                if (!state.entities.some((e) => e[idKey] === uid)) {
+                    return {
+                        loading: false,
+                        error: `Item with ${String(idKey)}=${uid} was not found.`,
+                    };
+                }
+                return {
+                    entities: state.entities.map((e) =>
+                        e[idKey] === uid ? { ...e, ...patch } : e
+                    ),
+                    loading: false,
                     error: null,
-                })),
+                };
+            }),
 
-            updateMany: (patches: any[]) =>
-                set((state) => ({
-                    entities: updateMany
-                        ? updateMany(patches, state)
-                        : state.entities.map((e) => {
-                            const p = patches.find((x) => x[idKey] === e[idKey]);
-                            return p ? { ...e, ...p } : e;
-                        }),
+        updateMany: (patches: any[]) =>
+            set((state: EntitiesState<any, any>) => ({
+                entities: updateMany
+                    ? updateMany(patches, state)
+                    : state.entities.map((e) => {
+                        const p = patches.find((x) => x[idKey] === e[idKey]);
+                        return p ? { ...e, ...p } : e;
+                    }),
+                loading: false,
+                error: null,
+            })),
+
+        delete: (uid: any) =>
+            set((state: EntitiesState<any, any>) => {
+                if (del) {
+                    return { entities: del(uid, state), loading: false, error: null };
+                }
+                if (!state.entities.some((e) => e[idKey] === uid)) {
+                    return {
+                        loading: false,
+                        error: `Item with ${String(idKey)}=${uid} was not found.`,
+                    };
+                }
+                return {
+                    entities: state.entities.filter((e) => e[idKey] !== uid),
+                    loading: false,
                     error: null,
-                })),
+                };
+            }),
 
-            delete: (uid) =>
-                set((state) => ({
-                    entities: del
-                        ? del(uid, state)
-                        : state.entities.filter((e) => e[idKey] !== uid),
-                    error: null,
-                })),
+        deleteMany: (uids: any[]) =>
+            set((state: EntitiesState<any, any>) => ({
+                entities: deleteMany
+                    ? deleteMany(uids, state)
+                    : state.entities.filter((e) => !uids.includes(e[idKey])),
+                loading: false,
+                error: null,
+            })),
 
-            deleteMany: (uids) =>
-                set((state) => ({
-                    entities: deleteMany
-                        ? deleteMany(uids, state)
-                        : state.entities.filter((e) => !uids.includes(e[idKey])),
-                    error: null,
-                })),
+        clear: () =>
+            set({
+                entities: [],
+                loaded: false,
+                loading: false,
+                error: null,
+            }),
 
-            clear: () =>
-                set({
-                    entities: [],
-                    loaded: false,
-                    error: null,
-                }),
+        find: (uid: any) => get().entities.find((e: any) => e[idKey] === uid),
 
-            find: (uid) => get().entities.find((e) => e[idKey] === uid),
+        has: (uid: any) => get().entities.some((e: any) => e[idKey] === uid),
 
-            has: (uid) => get().entities.some((e) => e[idKey] === uid),
+        replaceAll: (items: any[]) =>
+            set({
+                entities: items,
+                loaded: true,
+                loading: false,
+                error: null,
+            }),
+    });
 
-            replaceAll: (items: any[]) =>
-                set({
-                    entities: items,
-                    loaded: true,
-                    error: null,
-                }),
-        })
-    );
+    return zustandCreate(middleware ? middleware(initializer) : initializer);
 }

@@ -168,6 +168,9 @@ interface EntitiesStoreOptions<T, K extends keyof T> {
   updateMany?: (patches: (Pick<T, K> & Partial<T>)[], state: EntitiesState<T, K>) => T[];
   delete?: (uid: T[K], state: EntitiesState<T, K>) => T[];
   deleteMany?: (uids: T[K][], state: EntitiesState<T, K>) => T[];
+
+  // Optional Zustand middleware, e.g. persist or devtools
+  middleware?: ZentyMiddleware;
 }
 ```
 
@@ -219,7 +222,16 @@ function createEntityStore<T>(
 interface EntityStoreOptions<T> {
   initialState?: T | null;  // Initial entity state (defaults to null)
   deepMerge?: boolean;      // Whether updates should deep merge (defaults to false)
+  middleware?: ZentyMiddleware; // Optional Zustand middleware
 }
+```
+
+When `deepMerge` is `true`, `update` is typed as `DeepPartial<T>`, so nested
+objects can be partial without a cast:
+
+```typescript
+const useSettings = createEntityStore<Settings>({ deepMerge: true });
+useSettings.getState().update({ ui: { theme: 'dark' } }); // language stays intact
 ```
 
 #### State & Actions
@@ -308,7 +320,36 @@ const { update } = useSettingsStore();
 update({ ui: { theme: 'dark' } });
 ```
 
+### Zustand Middleware
+
+Pass any Zustand middleware through `middleware`. It receives the store
+initializer and returns the wrapped one:
+
+```typescript
+import { devtools, persist } from 'zustand/middleware';
+
+const useProductStore = createEntitiesStore<Product>({
+  middleware: (config) => devtools(persist(config, { name: 'products' })),
+});
+```
+
+The same option exists on `createEntityStore`.
+
+### Missing IDs
+
+`update` and `delete` report a missing ID instead of doing nothing:
+
+```typescript
+const store = useProductStore.getState();
+store.update('missing-id', { name: 'Nope' });
+store.error; // "Item with id=missing-id was not found."
+```
+
 ### Async Operations
+
+Zenty doesn't fetch for you, but every action that writes to the store
+(`replaceAll`, `add`, `addMany`, `update`, `delete`, `setError`, …) ends the
+`loading` state when it lands, so a `finally` block is optional:
 
 ```typescript
 const useProductStore = createEntitiesStore<Product>();
