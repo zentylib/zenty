@@ -117,12 +117,69 @@ describe('createEntitiesStore', () => {
     expect(store.getState().entities).toHaveLength(1);
   });
 
-  it('should end loading when setError is called', () => {
+  it('should end loading when setError is called with a message, but not when cleared with null', () => {
     const store = createEntitiesStore<Product>();
     store.getState().setLoading(true);
+    store.getState().setError(null);
+    expect(store.getState().loading).toBe(true);
     store.getState().setError('Could not load products');
     expect(store.getState().loading).toBe(false);
     expect(store.getState().error).toBe('Could not load products');
+  });
+
+  it('should catch errors thrown in overrides and report them to error state', () => {
+    const store = createEntitiesStore<Product>({
+      add: (item) => {
+        if (item.name === 'bad') throw new Error('Bad product');
+        return [item];
+      },
+      addMany: () => {
+        throw new Error('Cannot add many');
+      },
+      update: (_id, patch) => {
+        if (patch.name === 'bad') throw new Error('Bad update');
+        return [];
+      },
+      updateMany: () => {
+        throw new Error('Cannot update many');
+      },
+      delete: () => {
+        throw new Error('Cannot delete');
+      },
+      deleteMany: () => {
+        throw new Error('Cannot delete many');
+      },
+    });
+
+    store.getState().setLoading(true);
+    store.getState().add({ id: 1, name: 'bad' });
+    expect(store.getState().error).toBe('Bad product');
+    expect(store.getState().loading).toBe(false);
+
+    store.getState().setLoading(true);
+    store.getState().addMany([{ id: 1, name: 'bad' }]);
+    expect(store.getState().error).toBe('Cannot add many');
+    expect(store.getState().loading).toBe(false);
+
+    store.getState().setLoading(true);
+    store.getState().update(1, { name: 'bad' });
+    expect(store.getState().error).toBe('Bad update');
+    expect(store.getState().loading).toBe(false);
+
+    store.getState().setLoading(true);
+    store.getState().updateMany([{ id: 1, name: 'bad' }]);
+    expect(store.getState().error).toBe('Cannot update many');
+    expect(store.getState().loading).toBe(false);
+
+    store.getState().setLoading(true);
+    store.getState().delete(1);
+    expect(store.getState().error).toBe('Cannot delete');
+    expect(store.getState().loading).toBe(false);
+
+    store.getState().setLoading(true);
+    store.getState().deleteMany([1]);
+    expect(store.getState().error).toBe('Cannot delete many');
+    expect(store.getState().loading).toBe(false);
   });
 
   it('should report an update on a missing id', () => {

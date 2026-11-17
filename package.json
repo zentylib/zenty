@@ -32,7 +32,10 @@
     "state",
     "store",
     "entity",
-    "crud"
+    "crud",
+    "react",
+    "nextjs",
+    "typescript"
   ],
   "author": "Milaim Ajdari",
   "license": "MIT",

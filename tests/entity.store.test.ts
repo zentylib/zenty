@@ -38,9 +38,11 @@ describe('createEntityStore', () => {
     expect(store.getState().loaded).toBe(true);
   });
 
-  it('should end loading when setError is called', () => {
+  it('should end loading when setError is called with a message, but not when cleared with null', () => {
     const store = createEntityStore<User>();
     store.getState().setLoading(true);
+    store.getState().setError(null);
+    expect(store.getState().loading).toBe(true);
     store.getState().setError('Could not load the user');
     expect(store.getState().loading).toBe(false);
     expect(store.getState().error).toBe('Could not load the user');

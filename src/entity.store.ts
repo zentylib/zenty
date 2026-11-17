@@ -61,7 +61,8 @@ export function createEntityStore<T>(options: EntityStoreOptions<T> = {}): any {
         loading: false,
         error: null,
 
-        setError: (error: string | null) => set({ error, loading: false }),
+        setError: (error: string | null) =>
+            set(error === null ? { error } : { error, loading: false }),
         setLoading: (loading: boolean) => set({ loading }),
 
         set: (entity: T) => set({ entity, loaded: true, loading: false }),

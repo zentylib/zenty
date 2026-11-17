@@ -80,6 +80,20 @@ export function createEntitiesStore(options: any = {}) {
         middleware,
     } = options as EntitiesStoreOptions<any, any>;
 
+    const runOverride = (
+        fn: () => any[],
+        extra: Partial<EntitiesState<any, any>> = {}
+    ): Partial<EntitiesState<any, any>> => {
+        try {
+            return { entities: fn(), error: null, loading: false, ...extra };
+        } catch (e) {
+            return {
+                error: e instanceof Error ? e.message : String(e),
+                loading: false,
+            };
+        }
+    };
+
     const initializer = (set: any, get: any) => ({
         // initial state
         entities: initialState,
@@ -87,13 +101,14 @@ export function createEntitiesStore(options: any = {}) {
         loading: false,
         error: null,
 
-        setError: (error: string | null) => set({ error, loading: false }),
+        setError: (error: string | null) =>
+            set(error === null ? { error } : { error, loading: false }),
         setLoading: (loading: boolean) => set({ loading }),
 
         add: (item: any) =>
             set((state: EntitiesState<any, any>) => {
                 if (add) {
-                    return { entities: add(item, state), loaded: true, loading: false, error: null };
+                    return runOverride(() => add(item, state), { loaded: true });
                 }
                 if (state.entities.some((e) => e[idKey] === item[idKey])) {
                     return {
@@ -111,19 +126,22 @@ export function createEntitiesStore(options: any = {}) {
             }),
 
         addMany: (items: any[]) =>
-            set((state: EntitiesState<any, any>) => ({
-                entities: addMany
-                    ? addMany(items, state)
-                    : [...state.entities, ...items],
-                loaded: true,
-                loading: false,
-                error: null,
-            })),
+            set((state: EntitiesState<any, any>) => {
+                if (addMany) {
+                    return runOverride(() => addMany(items, state), { loaded: true });
+                }
+                return {
+                    entities: [...state.entities, ...items],
+                    loaded: true,
+                    loading: false,
+                    error: null,
+                };
+            }),
 
         update: (uid: any, patch: any) =>
             set((state: EntitiesState<any, any>) => {
                 if (update) {
-                    return { entities: update(uid, patch, state), loading: false, error: null };
+                    return runOverride(() => update(uid, patch, state));
                 }
                 if (!state.entities.some((e) => e[idKey] === uid)) {
                     return {
@@ -141,21 +159,24 @@ export function createEntitiesStore(options: any = {}) {
             }),
 
         updateMany: (patches: any[]) =>
-            set((state: EntitiesState<any, any>) => ({
-                entities: updateMany
-                    ? updateMany(patches, state)
-                    : state.entities.map((e) => {
+            set((state: EntitiesState<any, any>) => {
+                if (updateMany) {
+                    return runOverride(() => updateMany(patches, state));
+                }
+                return {
+                    entities: state.entities.map((e) => {
                         const p = patches.find((x) => x[idKey] === e[idKey]);
                         return p ? { ...e, ...p } : e;
                     }),
-                loading: false,
-                error: null,
-            })),
+                    loading: false,
+                    error: null,
+                };
+            }),
 
         delete: (uid: any) =>
             set((state: EntitiesState<any, any>) => {
                 if (del) {
-                    return { entities: del(uid, state), loading: false, error: null };
+                    return runOverride(() => del(uid, state));
                 }
                 if (!state.entities.some((e) => e[idKey] === uid)) {
                     return {
@@ -171,13 +192,16 @@ export function createEntitiesStore(options: any = {}) {
             }),
 
         deleteMany: (uids: any[]) =>
-            set((state: EntitiesState<any, any>) => ({
-                entities: deleteMany
-                    ? deleteMany(uids, state)
-                    : state.entities.filter((e) => !uids.includes(e[idKey])),
-                loading: false,
-                error: null,
-            })),
+            set((state: EntitiesState<any, any>) => {
+                if (deleteMany) {
+                    return runOverride(() => deleteMany(uids, state));
+                }
+                return {
+                    entities: state.entities.filter((e) => !uids.includes(e[idKey])),
+                    loading: false,
+                    error: null,
+                };
+            }),
 
         clear: () =>
             set({
