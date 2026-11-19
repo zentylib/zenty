@@ -1,4 +1,11 @@
-# Zenty Documentation
+# Zenty
+
+[![npm version](https://img.shields.io/npm/v/zenty.svg)](https://www.npmjs.com/package/zenty)
+[![CI](https://github.com/zentylib/zenty/actions/workflows/ci.yml/badge.svg)](https://github.com/zentylib/zenty/actions/workflows/ci.yml)
+[![bundle size](https://img.shields.io/bundlephobia/minzip/zenty)](https://bundlephobia.com/package/zenty)
+[![license](https://img.shields.io/npm/l/zenty.svg)](./LICENSE)
+
+**Type-safe CRUD stores for Zustand in one line.**
 
 Zenty is a powerful Zustand-based library that simplifies CRUD operations with elegant state management. It provides two main store creators for different use cases.
 
@@ -14,6 +21,7 @@ For more examples and advanced usage, visit our <a href="https://github.com/zent
 - [Examples](#examples)
 - [Best Practices](#best-practices)
 - [TypeScript Support](#typescript-support)
+- [Contributing](#contributing)
 
 ## Installation
 
@@ -28,6 +36,9 @@ yarn add zenty zustand
 ```bash
 pnpm add zenty zustand
 ```
+
+**Requirements:** React 18 or 19, Zustand 4.4+ or 5, and Node.js 18+ for tooling.
+Zenty ships ESM and CommonJS builds with TypeScript types included.
 
 ## Quick Start
 
@@ -478,3 +489,13 @@ Zenty is built with TypeScript and provides full type safety:
 ## Developers
 Zenty is developed and maintained by <a href="https://linkedin.com/in/milaim">Milaim Ajdari</a>
 and <a href="https://www.linkedin.com/in/leonshabani/">Leon Shabani</a>.
+
+## Contributing
+
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md)
+for setup and the checks a PR needs to pass, and [SECURITY.md](./SECURITY.md) for
+reporting vulnerabilities privately.
+
+## License
+
+[MIT](./LICENSE)

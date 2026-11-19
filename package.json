@@ -19,6 +19,9 @@
     "README.md"
   ],
   "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "exports": {
     ".": {
       "import": {

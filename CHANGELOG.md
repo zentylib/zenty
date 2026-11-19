@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ## [1.1.0] - 2026-11-17
 
 ### Added
@@ -31,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Package
 - `exports` now declare `types` for both `import` and `require`, `main` points to the CJS build, and `module`/`sideEffects: false` are set.
 - Added `LICENSE`, removed a wrong `repository.directory`, and `prepublishOnly` now runs typecheck and tests too.
+- Added `engines.node: >=18` and removed the unused `.npmignore` (`files` decides what ships).
+- Releases are published from GitHub Actions with npm provenance.
 
 ## [1.0.10] - 2026-06-12
 
