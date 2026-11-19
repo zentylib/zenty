@@ -10,7 +10,17 @@ export default defineConfig({
     baseURL: 'http://localhost:4173',
     trace: 'retain-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // PW_CHANNEL=chrome uses an installed Google Chrome instead of Playwright's
+        // bundled Chromium (CI runners ship Chrome, so nothing has to be downloaded).
+        ...(process.env.PW_CHANNEL ? { channel: process.env.PW_CHANNEL } : {}),
+      },
+    },
+  ],
   webServer: {
     // Tests run against the production build, like a deployed app.
     command: 'npm run build && npm run preview',

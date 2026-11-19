@@ -95,16 +95,15 @@ jobs:
           @types/react@${{ matrix.react }} @types/react-dom@${{ matrix.react }}
           zustand@${{ matrix.zustand }}
 
-      - name: Install Chromium (retries on flaky downloads)
-        run: |
-          for attempt in 1 2 3; do
-            npx playwright install --with-deps chromium && exit 0
-            echo "playwright install failed (attempt $attempt), retrying in 15s"
-            sleep 15
-          done
-          exit 1
+      # GitHub's Ubuntu runners ship Google Chrome. Using it skips the Chromium
+      # download and the apt-get system packages of `playwright install --with-deps`,
+      # which took up to 10+ minutes on slow mirrors.
+      - name: Show preinstalled Chrome
+        run: google-chrome --version
       - run: npm run typecheck
       - run: npm run test:e2e
+        env:
+          PW_CHANNEL: chrome
 
       - uses: actions/upload-artifact@v7
         if: failure()
