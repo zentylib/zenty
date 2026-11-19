@@ -28,8 +28,8 @@ export default [
       'jest/no-disabled-tests': 'warn',
       'jest/no-identical-title': 'error',
       'jest/prefer-to-have-length': 'warn',
-      '@typescript-eslint/no-unused-vars': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
     },
   },
 ];

@@ -157,12 +157,12 @@ Creates a Zustand store for managing collections of entities with built-in CRUD 
 // For entities with 'id' field
 function createEntitiesStore<T extends { id: string | number }>(
   options?: EntitiesStoreOptions<T, 'id'>
-): UseBoundStore<StoreApi<EntitiesState<T, 'id'> & EntitiesActions<T, 'id'>>>;
+): EntitiesStore<T, 'id'>;
 
 // For entities with custom ID field
 function createEntitiesStore<T, K extends keyof T>(
   options: EntitiesStoreOptions<T, K>
-): UseBoundStore<StoreApi<EntitiesState<T, K> & EntitiesActions<T, K>>>;
+): EntitiesStore<T, K>;
 ```
 
 #### Options
@@ -173,22 +173,22 @@ interface EntitiesStoreOptions<T, K extends keyof T> {
   initialState?: T[];          // Initial list of entities (defaults to [])
   
   // Optional custom implementations for each action
-  add?: (item: T, state: EntitiesState<T, K>) => T[];
-  addMany?: (items: T[], state: EntitiesState<T, K>) => T[];
-  update?: (uid: T[K], patch: Partial<T>, state: EntitiesState<T, K>) => T[];
-  updateMany?: (patches: (Pick<T, K> & Partial<T>)[], state: EntitiesState<T, K>) => T[];
-  delete?: (uid: T[K], state: EntitiesState<T, K>) => T[];
-  deleteMany?: (uids: T[K][], state: EntitiesState<T, K>) => T[];
+  add?: (item: T, state: EntitiesState<T>) => T[];
+  addMany?: (items: T[], state: EntitiesState<T>) => T[];
+  update?: (uid: T[K], patch: Partial<T>, state: EntitiesState<T>) => T[];
+  updateMany?: (patches: (Pick<T, K> & Partial<T>)[], state: EntitiesState<T>) => T[];
+  delete?: (uid: T[K], state: EntitiesState<T>) => T[];
+  deleteMany?: (uids: T[K][], state: EntitiesState<T>) => T[];
 
   // Optional Zustand middleware, e.g. persist or devtools
-  middleware?: ZentyMiddleware;
+  middleware?: ZentyMiddleware<EntitiesStoreState<T, K>>;
 }
 ```
 
 #### State
 
 ```typescript
-interface EntitiesState<T, K extends keyof T> {
+interface EntitiesState<T> {
   entities: T[];           // Array of entities
   loaded: boolean;         // Whether data has been loaded
   loading: boolean;        // Whether an operation is in progress
@@ -233,7 +233,7 @@ function createEntityStore<T>(
 interface EntityStoreOptions<T> {
   initialState?: T | null;  // Initial entity state (defaults to null)
   deepMerge?: boolean;      // Whether updates should deep merge (defaults to false)
-  middleware?: ZentyMiddleware; // Optional Zustand middleware
+  middleware?: ZentyMiddleware<EntityStoreState<T>>; // Optional Zustand middleware
 }
 ```
 
@@ -345,6 +345,32 @@ const useProductStore = createEntitiesStore<Product>({
 ```
 
 The same option exists on `createEntityStore`.
+
+The middleware is fully typed against the store's state, so options like
+`partialize` get autocompletion and type errors without casts:
+
+```typescript
+const useProductStore = createEntitiesStore<Product>({
+  middleware: (config) =>
+    persist(config, {
+      name: 'products',
+      partialize: (state) => ({ entities: state.entities }), // state is typed
+    }),
+});
+```
+
+To define a middleware once and reuse it, type it with the exported state types:
+
+```typescript
+import type { EntitiesStoreState, ZentyMiddleware } from 'zenty';
+
+const persistProducts: ZentyMiddleware<EntitiesStoreState<Product, 'id'>> = (config) =>
+  persist(config, { name: 'products' });
+```
+
+The exported types are `EntitiesStore`, `EntitiesStoreState`, `EntitiesState`,
+`EntitiesActions`, `EntityStore`, `EntityStoreState`, `EntityState`,
+`EntityActions`, `DeepPartial` and `ZentyMiddleware`.
 
 ### Missing and duplicate IDs
 

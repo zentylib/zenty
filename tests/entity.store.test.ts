@@ -116,7 +116,7 @@ describe('createEntityStore', () => {
   it('should accept a middleware wrapper', () => {
     let wrapped = false;
     const store = createEntityStore<User>({
-      middleware: (config: any) => (set: any, get: any, api: any) => {
+      middleware: (config) => (set, get, api) => {
         wrapped = true;
         return config(set, get, api);
       },
