@@ -28,4 +28,6 @@ npm run test:e2e                  # 19 browser tests against the production buil
 npm run test:matrix               # the same on React 18/19 × Zustand 4/5
 ```
 
-CI runs the E2E suite on every push for all four React/Zustand combinations.
+CI runs the E2E suite on every push for all four React/Zustand combinations,
+using the runner's preinstalled Google Chrome (`PW_CHANNEL=chrome`). Locally you
+can do the same instead of downloading Chromium: `PW_CHANNEL=chrome npm run test:e2e`.
