@@ -44,4 +44,6 @@ npm ci   # back to the locked versions
 1. Bump `version` in `package.json` and move the changelog entries under the new version with today's date.
 2. Commit, then create a GitHub release with the tag `v<version>` (e.g. `v1.1.0`).
 3. The **Release** workflow checks that the tag matches `package.json`, runs all checks, and
-   publishes to npm with provenance via npm trusted publishing (no token involved).
+   stages the version on npm with provenance via npm trusted publishing (no token involved).
+4. Approve the staged version on npmjs.com (package → Settings / staged versions) with 2FA.
+   Only then does it go live.

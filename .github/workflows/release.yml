@@ -1,6 +1,7 @@
 name: Release
 
-# Publishes to npm when a GitHub release is published (tag must be v<package.json version>).
+# Stages a release on npm when a GitHub release is published (tag must be v<package.json version>).
+# A maintainer then approves the staged version on npmjs.com (with 2FA) to make it live.
 on:
   release:
     types: [published]
@@ -30,10 +31,11 @@ jobs:
             exit 1
           fi
 
-      # Trusted publishing (OIDC, no npm token) needs npm 11.5.1 or newer.
-      - run: npm install -g npm@^11.5.1
+      # Trusted publishing (OIDC, no npm token) and `npm stage publish` need a current npm.
+      - run: npm install -g npm@latest
 
       - run: npm ci
       # prepublishOnly runs lint, typecheck, tests and build before publishing.
-      # With trusted publishing, npm authenticates via OIDC and adds provenance automatically.
-      - run: npm publish --access public
+      # npm authenticates via OIDC and adds provenance automatically. The trusted publisher
+      # only allows staging, so nothing goes live until it is approved on npmjs.com.
+      - run: npm stage publish --access public
