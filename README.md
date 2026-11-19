@@ -335,7 +335,7 @@ const useProductStore = createEntitiesStore<Product>({
 
 The same option exists on `createEntityStore`.
 
-### Missing IDs
+### Missing and duplicate IDs
 
 `update` and `delete` report a missing ID instead of doing nothing:
 
@@ -344,6 +344,26 @@ const store = useProductStore.getState();
 store.update('missing-id', { name: 'Nope' });
 store.error; // "Item with id=missing-id was not found."
 ```
+
+IDs stay unique. `add` and `addMany` reject items whose ID is already in the
+store (or repeated inside the batch), and `update` refuses to change an ID to
+one that is taken. A rejected `addMany` adds nothing at all:
+
+```typescript
+store.addMany([{ id: 'p2', name: 'New' }, { id: 'p1', name: 'Dup' }]);
+store.error; // "Items with id=p1 already exist." (p2 was not added either)
+```
+
+On a single-entity store, `update` before anything is `set` reports
+`"Cannot update: no entity is set. Call set() first."`. A successful write
+clears a previous `error`.
+
+### `loaded`
+
+`loaded` turns `true` once data has landed in the store: a non-empty
+`initialState`, `set`, `replaceAll`, `add` or `addMany`. Deleting the last
+item leaves it `true` (the list was loaded, it is just empty); only `clear()`
+resets it to `false`.
 
 ### Async Operations
 

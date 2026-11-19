@@ -51,14 +51,14 @@ describe('createEntitiesStore', () => {
     const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] });
     store.getState().delete(1);
     expect(store.getState().entities).toHaveLength(0);
-    expect(store.getState().loaded).toBe(false);
+    expect(store.getState().loaded).toBe(true); // emptied, but still loaded
   });
 
   it('should delete multiple products', () => {
     const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }, { id: 2, name: 'Phone' }] });
     store.getState().deleteMany([1, 2]);
     expect(store.getState().entities).toHaveLength(0);
-    expect(store.getState().loaded).toBe(false);
+    expect(store.getState().loaded).toBe(true); // emptied, but still loaded
   });
 
   it('should clear all products', () => {
@@ -180,6 +180,120 @@ describe('createEntitiesStore', () => {
     store.getState().deleteMany([1]);
     expect(store.getState().error).toBe('Cannot delete many');
     expect(store.getState().loading).toBe(false);
+  });
+
+  it('should report non-Error values thrown in overrides as strings', () => {
+    const store = createEntitiesStore<Product>({
+      add: () => {
+        throw 'plain string failure';
+      },
+    });
+    store.getState().add({ id: 1, name: 'Laptop' });
+    expect(store.getState().error).toBe('plain string failure');
+    expect(store.getState().entities).toEqual([]);
+  });
+
+  it('should keep entities unchanged when an override throws', () => {
+    const initial = [{ id: 1, name: 'Laptop' }];
+    const store = createEntitiesStore<Product>({
+      initialState: initial,
+      update: () => {
+        throw new Error('nope');
+      },
+    });
+    store.getState().update(1, { name: 'Tablet' });
+    expect(store.getState().entities).toEqual(initial);
+  });
+
+  it('should use the override result and clear a previous error', () => {
+    const store = createEntitiesStore<Product>({
+      add: (item, state) => [...state.entities, { ...item, name: item.name.toUpperCase() }],
+    });
+    store.getState().setError('old');
+    store.getState().add({ id: 1, name: 'laptop' });
+    expect(store.getState().entities).toEqual([{ id: 1, name: 'LAPTOP' }]);
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().loaded).toBe(true);
+  });
+
+  it('should only update the matching product and leave others untouched', () => {
+    const phone = { id: 2, name: 'Phone' };
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }, phone] });
+    store.getState().update(1, { name: 'Tablet' });
+    expect(store.getState().entities).toEqual([{ id: 1, name: 'Tablet' }, phone]);
+    expect(store.getState().entities[1]).toBe(phone);
+  });
+
+  it('should skip patches in updateMany whose id is not present', () => {
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }, { id: 2, name: 'Phone' }] });
+    store.getState().updateMany([{ id: 2, name: 'Smartphone' }, { id: 99, name: 'Ghost' }]);
+    expect(store.getState().entities).toEqual([{ id: 1, name: 'Laptop' }, { id: 2, name: 'Smartphone' }]);
+  });
+
+  it('should clear a previous error after a successful write', () => {
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] });
+    store.getState().delete(99);
+    expect(store.getState().error).not.toBeNull();
+    store.getState().delete(1);
+    expect(store.getState().error).toBeNull();
+  });
+
+  it('should support string ids with a custom idKey across all actions', () => {
+    type User = { userId: string; name: string };
+    const store = createEntitiesStore<User, 'userId'>({ idKey: 'userId' });
+    store.getState().addMany([{ userId: 'a', name: 'A' }, { userId: 'b', name: 'B' }]);
+    store.getState().update('a', { name: 'AA' });
+    store.getState().deleteMany(['b']);
+    expect(store.getState().entities).toEqual([{ userId: 'a', name: 'AA' }]);
+    expect(store.getState().find('a')?.name).toBe('AA');
+    expect(store.getState().has('b')).toBe(false);
+  });
+
+  it('should be loaded when created with a non-empty initialState', () => {
+    expect(createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] }).getState().loaded).toBe(true);
+    expect(createEntitiesStore<Product>({ initialState: [] }).getState().loaded).toBe(false);
+    expect(createEntitiesStore<Product>().getState().loaded).toBe(false);
+  });
+
+  it('should reject an addMany batch that collides with existing ids', () => {
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] });
+    store.getState().setLoading(true);
+    store.getState().addMany([{ id: 2, name: 'Phone' }, { id: 1, name: 'Dup' }]);
+    expect(store.getState().entities).toEqual([{ id: 1, name: 'Laptop' }]);
+    expect(store.getState().error).toBe('Items with id=1 already exist.');
+    expect(store.getState().loading).toBe(false);
+  });
+
+  it('should reject an addMany batch with duplicate ids inside it', () => {
+    const store = createEntitiesStore<Product>();
+    store.getState().addMany([{ id: 2, name: 'A' }, { id: 3, name: 'B' }, { id: 2, name: 'C' }, { id: 3, name: 'D' }, { id: 2, name: 'E' }]);
+    expect(store.getState().entities).toEqual([]);
+    expect(store.getState().error).toBe('Items with id=2, 3 already exist.');
+  });
+
+  it('should accept an empty addMany batch', () => {
+    const store = createEntitiesStore<Product>();
+    store.getState().addMany([]);
+    expect(store.getState().entities).toEqual([]);
+    expect(store.getState().error).toBeNull();
+    expect(store.getState().loaded).toBe(true);
+  });
+
+  it('should reject an update that changes the id to one already in use', () => {
+    const initial = [{ id: 1, name: 'Laptop' }, { id: 2, name: 'Phone' }];
+    const store = createEntitiesStore<Product>({ initialState: initial });
+    store.getState().update(2, { id: 1 });
+    expect(store.getState().entities).toEqual(initial);
+    expect(store.getState().error).toBe('Cannot change id=2 to 1: an item with that id already exists.');
+  });
+
+  it('should allow an update that changes the id to a free one or keeps it', () => {
+    const store = createEntitiesStore<Product>({ initialState: [{ id: 1, name: 'Laptop' }] });
+    store.getState().update(1, { id: 1, name: 'Same id' });
+    expect(store.getState().error).toBeNull();
+    store.getState().update(1, { id: 5 });
+    expect(store.getState().entities).toEqual([{ id: 5, name: 'Same id' }]);
+    expect(store.getState().error).toBeNull();
   });
 
   it('should report an update on a missing id', () => {

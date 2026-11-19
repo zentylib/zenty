@@ -65,15 +65,20 @@ export function createEntityStore<T>(options: EntityStoreOptions<T> = {}): any {
             set(error === null ? { error } : { error, loading: false }),
         setLoading: (loading: boolean) => set({ loading }),
 
-        set: (entity: T) => set({ entity, loaded: true, loading: false }),
+        set: (entity: T) => set({ entity, loaded: true, loading: false, error: null }),
 
         update: (updated: any) =>
             set((state: EntityState<T>) => {
-                if (!state.entity) return state;
+                if (state.entity === null) {
+                    return {
+                        loading: false,
+                        error: 'Cannot update: no entity is set. Call set() first.',
+                    };
+                }
                 const newEntity = shouldDeepMerge
                     ? deepMerge(state.entity, updated)
                     : { ...state.entity, ...updated };
-                return { entity: newEntity, loaded: true, loading: false };
+                return { entity: newEntity, loaded: true, loading: false, error: null };
             }),
 
         clear: () => set({ entity: null, loaded: false, loading: false }),

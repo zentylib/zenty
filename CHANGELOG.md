@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `setError(null)` preserves the current `loading` state so callers can clear errors at the start of async requests without resetting the loading spinner.
 - **Package metadata**: Updated `bugs.url` to `https://github.com/zentylib/zenty/issues` and added `react`, `nextjs`, and `typescript` keywords.
 
+### Fixed
+- **React 18 installs**: Removed the `react-dom` peer dependency (zenty never imports it). It made npm pull `react-dom@19`, which then failed with `ERESOLVE` for every React 18 project. `react` is now `>=18`.
+- **Duplicate IDs**: `addMany` now rejects a batch that repeats an existing ID or contains the same ID twice (nothing is added, `error` is set), matching `add`. `update` refuses to change an item's ID to one already in use.
+- **Consistent `loaded`**: `createEntitiesStore` with a non-empty `initialState` now starts with `loaded: true`, like `createEntityStore` does.
+- **`update` on an empty single-entity store**: it now sets `error` and ends `loading` instead of silently doing nothing and leaving `loading` stuck at `true`. `set` and `update` also clear a previous `error` on success.
+- **`deepMerge` destroyed non-plain objects**: `Date`, `Map`, `Set` and class instances were flattened into `{}` during a deep-merge `update`. Only plain objects are merged now; everything else is replaced as a whole value, matching `DeepPartial`.
+
+### Package
+- `exports` now declare `types` for both `import` and `require`, `main` points to the CJS build, and `module`/`sideEffects: false` are set.
+- Added `LICENSE`, removed a wrong `repository.directory`, and `prepublishOnly` now runs typecheck and tests too.
+
 ## [1.0.10] - 2026-06-12
 
 - Support for Zustand v5 and React 18/19.

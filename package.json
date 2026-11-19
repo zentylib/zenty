@@ -2,13 +2,13 @@
   "name": "zenty",
   "version": "1.1.0",
   "description": "Type-safe CRUD stores for Zustand in one line",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zentylib/zenty",
-    "directory": "packages/zenty"
+    "url": "git+https://github.com/zentylib/zenty.git"
   },
   "bugs": {
     "url": "https://github.com/zentylib/zenty/issues"
@@ -18,18 +18,27 @@
     "dist",
     "README.md"
   ],
+  "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",
-    "prepublishOnly": "npm run lint && npm run build",
-    "build": "tsup src/index.ts --dts --format esm,cjs"
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build",
+    "build": "tsup src/index.ts --dts --format esm,cjs",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "zustand",
@@ -60,8 +69,7 @@
     "zustand": "^5.0.0"
   },
   "peerDependencies": {
-    "react": ">=18 <20",
-    "react-dom": ">=18 <20",
+    "react": ">=18",
     "zustand": "^4.4.0 || ^5.0.0"
   }
 }

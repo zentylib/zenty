@@ -97,7 +97,8 @@ export function createEntitiesStore(options: any = {}) {
     const initializer = (set: any, get: any) => ({
         // initial state
         entities: initialState,
-        loaded: false,
+        // Same rule as createEntityStore: data handed in up front counts as loaded.
+        loaded: initialState.length > 0,
         loading: false,
         error: null,
 
@@ -130,6 +131,22 @@ export function createEntitiesStore(options: any = {}) {
                 if (addMany) {
                     return runOverride(() => addMany(items, state), { loaded: true });
                 }
+                const existing = new Set(state.entities.map((e) => e[idKey]));
+                const seen = new Set();
+                const duplicates: unknown[] = [];
+                for (const item of items) {
+                    const uid = item[idKey];
+                    if (existing.has(uid) || seen.has(uid)) duplicates.push(uid);
+                    seen.add(uid);
+                }
+                if (duplicates.length > 0) {
+                    // All or nothing, like `add`: a rejected batch leaves the list untouched.
+                    return {
+                        loaded: true,
+                        loading: false,
+                        error: `Items with ${String(idKey)}=${[...new Set(duplicates)].join(', ')} already exist.`,
+                    };
+                }
                 return {
                     entities: [...state.entities, ...items],
                     loaded: true,
@@ -147,6 +164,17 @@ export function createEntitiesStore(options: any = {}) {
                     return {
                         loading: false,
                         error: `Item with ${String(idKey)}=${uid} was not found.`,
+                    };
+                }
+                if (
+                    patch &&
+                    idKey in patch &&
+                    patch[idKey] !== uid &&
+                    state.entities.some((e) => e[idKey] === patch[idKey])
+                ) {
+                    return {
+                        loading: false,
+                        error: `Cannot change ${String(idKey)}=${uid} to ${patch[idKey]}: an item with that ${String(idKey)} already exists.`,
                     };
                 }
                 return {
