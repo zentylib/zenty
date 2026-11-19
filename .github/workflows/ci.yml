@@ -61,3 +61,46 @@ jobs:
           npm install react@${{ matrix.react }} zustand@${{ matrix.zustand }} ../zenty-*.tgz
           node --input-type=module -e "import { createEntitiesStore } from 'zenty'; const s = createEntitiesStore(); s.getState().add({ id: 1 }); if (s.getState().entities.length !== 1) process.exit(1); console.log('ESM ok')"
           node -e "const { createEntityStore } = require('zenty'); const s = createEntityStore({ initialState: { a: 1 } }); if (!s.getState().loaded) process.exit(1); console.log('CJS ok')"
+
+  demo-e2e:
+    name: Demo app E2E (React ${{ matrix.react }} / zustand ${{ matrix.zustand }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        react: [18, 19]
+        zustand: [4, 5]
+    defaults:
+      run:
+        working-directory: examples/demo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install library dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Pack zenty and install the demo (like a real consumer)
+        run: npm run pack-lib
+
+      - name: Use React ${{ matrix.react }} and zustand ${{ matrix.zustand }}
+        run: >
+          npm install --no-save --no-audit --no-fund
+          react@${{ matrix.react }} react-dom@${{ matrix.react }}
+          @types/react@${{ matrix.react }} @types/react-dom@${{ matrix.react }}
+          zustand@${{ matrix.zustand }}
+
+      - run: npx playwright install --with-deps chromium
+      - run: npm run typecheck
+      - run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-react${{ matrix.react }}-zustand${{ matrix.zustand }}
+          path: examples/demo/test-results

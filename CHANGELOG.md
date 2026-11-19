@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **React 18 installs**: Removed the `react-dom` peer dependency (zenty never imports it). It made npm pull `react-dom@19`, which then failed with `ERESOLVE` for every React 18 project. `react` is now `>=18`.
 - **Duplicate IDs**: `addMany` now rejects a batch that repeats an existing ID or contains the same ID twice (nothing is added, `error` is set), matching `add`. `update` refuses to change an item's ID to one already in use.
 - **Consistent `loaded`**: `createEntitiesStore` with a non-empty `initialState` now starts with `loaded: true`, like `createEntityStore` does.
+- **`clear()` on a single-entity store** now also resets `error`, matching the collection store.
 - **`update` on an empty single-entity store**: it now sets `error` and ends `loading` instead of silently doing nothing and leaving `loading` stuck at `true`. `set` and `update` also clear a previous `error` on success.
 - **`deepMerge` destroyed non-plain objects**: `Date`, `Map`, `Set` and class instances were flattened into `{}` during a deep-merge `update`. Only plain objects are merged now; everything else is replaced as a whole value, matching `DeepPartial`.
 

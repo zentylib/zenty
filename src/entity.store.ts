@@ -88,7 +88,7 @@ export function createEntityStore<T>(
                 return { entity, loaded: true, loading: false, error: null };
             }),
 
-        clear: () => set({ entity: null, loaded: false, loading: false }),
+        clear: () => set({ entity: null, loaded: false, loading: false, error: null }),
     });
 
     return zustandCreate<State>()(

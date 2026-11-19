@@ -8,10 +8,22 @@ export default [
     ignores: [
       'dist/**',
       'node_modules/**',
+      'coverage/**',
+      'examples/*/dist/**',
+      'examples/*/.lib/**',
+      'examples/*/test-results/**',
+      'examples/*/playwright-report/**',
       'jest.config.cjs'
     ],
   },
   js.configs.recommended,
+  {
+    // Node scripts (e.g. the demo's pack-lib.mjs)
+    files: ['**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly' },
+    },
+  },
   ...tseslint.configs.recommended,
   {
     files: ['**/*.ts'],

@@ -30,6 +30,15 @@ describe('createEntityStore', () => {
     expect(store.getState().loaded).toBe(false);
   });
 
+  it('should reset error and loading on clear, like the collection store', () => {
+    const store = createEntityStore<User>({ initialState: { id: 1, name: 'Alice' } });
+    store.getState().setLoading(true);
+    store.getState().setError('Profile service down');
+    store.getState().setLoading(true);
+    store.getState().clear();
+    expect(store.getState()).toMatchObject({ entity: null, loaded: false, loading: false, error: null });
+  });
+
   it('should end loading when set lands', () => {
     const store = createEntityStore<User>();
     store.getState().setLoading(true);

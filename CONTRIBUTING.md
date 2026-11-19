@@ -24,6 +24,13 @@ npm test            # Jest
 npm run build       # tsup -> dist/
 ```
 
+For changes that affect behaviour, also run the demo app's browser tests
+(see [examples/demo](./examples/demo/README.md)):
+
+```bash
+cd examples/demo && npm run pack-lib && npx playwright install chromium && npm run test:e2e
+```
+
 To try your change against Zustand 4:
 
 ```bash

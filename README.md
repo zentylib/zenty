@@ -359,6 +359,10 @@ const useProductStore = createEntitiesStore<Product>({
 });
 ```
 
+When you `partialize` a persisted store, keep `loaded` next to the data
+(`({ entities: state.entities, loaded: state.loaded })`). Otherwise `loaded`
+comes from `initialState` on every page load, even when the saved list is empty.
+
 To define a middleware once and reuse it, type it with the exported state types:
 
 ```typescript
