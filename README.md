@@ -87,7 +87,7 @@ function ProductList() {
       {entities.map(product => (
         <div key={product.id}>
           <h3>{product.name}</h3>
-          <p>Price: \${product.price}</p>
+          <p>Price: ${product.price}</p>
           <button onClick={() => deleteProduct(product.id)}>
             Delete
           </button>
@@ -154,15 +154,17 @@ Creates a Zustand store for managing collections of entities with built-in CRUD 
 #### Signature
 
 ```typescript
-// For entities with 'id' field
+// For entities with an 'id' field (idKey is optional)
 function createEntitiesStore<T extends { id: string | number }>(
-  options?: EntitiesStoreOptions<T, 'id'>
+  options?: Omit<EntitiesStoreOptions<T, 'id'>, 'idKey'> & { idKey?: 'id' }
 ): EntitiesStore<T, 'id'>;
 
-// For entities with custom ID field
-function createEntitiesStore<T, K extends keyof T>(
+// For entities with a custom ID field (idKey is required)
+function createEntitiesStore<T extends Record<K, string | number>, K extends keyof T>(
   options: EntitiesStoreOptions<T, K>
 ): EntitiesStore<T, K>;
+
+// EntitiesStore<T, K> = UseBoundStore<StoreApi<EntitiesState<T> & EntitiesActions<T, K>>>
 ```
 
 #### Options
@@ -172,7 +174,8 @@ interface EntitiesStoreOptions<T, K extends keyof T> {
   idKey: K;                    // Which field is the unique identifier
   initialState?: T[];          // Initial list of entities (defaults to [])
   
-  // Optional custom implementations for each action
+  // Optional custom implementations for each action.
+  // Errors thrown in them are caught and written to `error`.
   add?: (item: T, state: EntitiesState<T>) => T[];
   addMany?: (items: T[], state: EntitiesState<T>) => T[];
   update?: (uid: T[K], patch: Partial<T>, state: EntitiesState<T>) => T[];
@@ -222,18 +225,26 @@ Creates a Zustand store for managing a single entity.
 #### Signature
 
 ```typescript
+// update takes a Partial<T>
 function createEntityStore<T>(
-  options?: EntityStoreOptions<T>
-): UseBoundStore<StoreApi<EntityState<T> & EntityActions<T>>>;
+  options?: EntityStoreOptions<T, false>
+): EntityStore<T, false>;
+
+// with deepMerge: true, update takes a DeepPartial<T>
+function createEntityStore<T>(
+  options: EntityStoreOptions<T, true> & { deepMerge: true }
+): EntityStore<T, true>;
+
+// EntityStore<T, D> = UseBoundStore<StoreApi<EntityState<T> & EntityActions<T, EntityPatch<T, D>>>>
 ```
 
 #### Options
 
 ```typescript
-interface EntityStoreOptions<T> {
+interface EntityStoreOptions<T, D extends boolean> {
   initialState?: T | null;  // Initial entity state (defaults to null)
-  deepMerge?: boolean;      // Whether updates should deep merge (defaults to false)
-  middleware?: ZentyMiddleware<EntityStoreState<T>>; // Optional Zustand middleware
+  deepMerge?: D;            // Whether updates should deep merge (defaults to false)
+  middleware?: ZentyMiddleware<EntityStoreState<T, D>>; // Optional Zustand middleware
 }
 ```
 
@@ -241,9 +252,17 @@ When `deepMerge` is `true`, `update` is typed as `DeepPartial<T>`, so nested
 objects can be partial without a cast:
 
 ```typescript
-const useSettings = createEntityStore<Settings>({ deepMerge: true });
+type Settings = { ui: { theme: string; language: string } };
+
+const useSettings = createEntityStore<Settings>({
+  deepMerge: true,
+  initialState: { ui: { theme: 'light', language: 'en' } },
+});
 useSettings.getState().update({ ui: { theme: 'dark' } }); // language stays intact
 ```
+
+`Date`, `Map`, `Set`, arrays and class instances are replaced as whole values,
+only plain objects are merged.
 
 #### State & Actions
 
@@ -255,10 +274,11 @@ interface EntityState<T> {
   error: string | null;     // Error message if any
 }
 
-interface EntityActions<T> {
+// Patch is Partial<T>, or DeepPartial<T> with deepMerge: true
+interface EntityActions<T, Patch> {
   set: (entity: T) => void;                    // Set the entire entity
-  update: (updated: Partial<T>) => void;       // Update parts of the entity
-  clear: () => void;                           // Clear the entity
+  update: (updated: Patch) => void;            // Update parts of the entity
+  clear: () => void;                           // Reset entity, loaded and error
   setError: (error: string | null) => void;    // Set error state
   setLoading: (loading: boolean) => void;      // Set loading state
 }
@@ -286,6 +306,14 @@ const useUserStore = createEntitiesStore<User, 'userId'>({
 ### Custom CRUD Operations
 
 ```typescript
+type Product = {
+  id: string;
+  name: string;
+  price?: number;
+  createdAt?: Date;
+  deleted?: boolean;
+};
+
 const useProductStore = createEntitiesStore<Product>({
   // Custom add logic with validation
   add: (item, state) => {
@@ -326,9 +354,9 @@ const useSettingsStore = createEntityStore<Settings>({
   }
 });
 
-// This will only update the theme, keeping language intact
-const { update } = useSettingsStore();
-update({ ui: { theme: 'dark' } });
+// This will only update the theme, keeping language intact.
+// Outside components use getState(); inside, `const { update } = useSettingsStore()`.
+useSettingsStore.getState().update({ ui: { theme: 'dark' } });
 ```
 
 ### Zustand Middleware
@@ -350,6 +378,8 @@ The middleware is fully typed against the store's state, so options like
 `partialize` get autocompletion and type errors without casts:
 
 ```typescript
+import { persist } from 'zustand/middleware';
+
 const useProductStore = createEntitiesStore<Product>({
   middleware: (config) =>
     persist(config, {
@@ -366,33 +396,43 @@ comes from `initialState` on every page load, even when the saved list is empty.
 To define a middleware once and reuse it, type it with the exported state types:
 
 ```typescript
+import { persist } from 'zustand/middleware';
 import type { EntitiesStoreState, ZentyMiddleware } from 'zenty';
 
 const persistProducts: ZentyMiddleware<EntitiesStoreState<Product, 'id'>> = (config) =>
   persist(config, { name: 'products' });
 ```
 
-The exported types are `EntitiesStore`, `EntitiesStoreState`, `EntitiesState`,
-`EntitiesActions`, `EntityStore`, `EntityStoreState`, `EntityState`,
-`EntityActions`, `DeepPartial` and `ZentyMiddleware`.
+Besides `createEntitiesStore`, `createEntityStore` and the `deepMerge` helper,
+zenty exports these types: `EntitiesStore`, `EntitiesStoreState`, `EntitiesState`,
+`EntitiesActions`, `EntitiesStoreOptions`, `EntityStore`, `EntityStoreState`,
+`EntityState`, `EntityActions`, `EntityStoreOptions`, `EntityPatch`, `DeepPartial`
+and `ZentyMiddleware`.
 
 ### Missing and duplicate IDs
 
 `update` and `delete` report a missing ID instead of doing nothing:
 
 ```typescript
-const store = useProductStore.getState();
-store.update('missing-id', { name: 'Nope' });
-store.error; // "Item with id=missing-id was not found."
+type Product = { id: string; name: string };
+const useProductStore = createEntitiesStore<Product>({
+  initialState: [{ id: 'p1', name: 'Lamp' }],
+});
+
+useProductStore.getState().update('missing-id', { name: 'Nope' });
+useProductStore.getState().error; // "Item with id=missing-id was not found."
 ```
+
+Read `error` from a fresh `getState()` (or a hook) after the call. A state
+object you grabbed before the call is a snapshot and still shows the old value.
 
 IDs stay unique. `add` and `addMany` reject items whose ID is already in the
 store (or repeated inside the batch), and `update` refuses to change an ID to
 one that is taken. A rejected `addMany` adds nothing at all:
 
 ```typescript
-store.addMany([{ id: 'p2', name: 'New' }, { id: 'p1', name: 'Dup' }]);
-store.error; // "Items with id=p1 already exist." (p2 was not added either)
+useProductStore.getState().addMany([{ id: 'p2', name: 'New' }, { id: 'p1', name: 'Dup' }]);
+useProductStore.getState().error; // "Items with id=p1 already exist." (p2 was not added either)
 ```
 
 On a single-entity store, `update` before anything is `set` reports
@@ -415,36 +455,35 @@ Zenty doesn't fetch for you, but every action that writes to the store
 ```typescript
 const useProductStore = createEntitiesStore<Product>();
 
+const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 async function fetchProducts() {
   const { setLoading, setError, replaceAll } = useProductStore.getState();
-  
+
+  setError(null); // clears an old error, keeps loading as it is
+  setLoading(true);
   try {
-    setLoading(true);
     const response = await fetch('/api/products');
     const products = await response.json();
-    replaceAll(products);
+    replaceAll(products); // ends loading
   } catch (error) {
-    setError(error.message);
-  } finally {
-    setLoading(false);
+    setError(message(error)); // ends loading too
   }
 }
 
 async function createProduct(product: Omit<Product, 'id'>) {
   const { setLoading, setError, add } = useProductStore.getState();
-  
+
+  setLoading(true);
   try {
-    setLoading(true);
     const response = await fetch('/api/products', {
       method: 'POST',
       body: JSON.stringify(product)
     });
     const newProduct = await response.json();
-    add(newProduct);
+    add(newProduct); // ends loading; reports a duplicate id in `error`
   } catch (error) {
-    setError(error.message);
-  } finally {
-    setLoading(false);
+    setError(message(error));
   }
 }
 ```

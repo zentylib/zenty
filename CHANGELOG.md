@@ -7,13 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-11-17
+## [1.1.0] - 2026-11-19
 
 ### Added
 - **DeepPartial typing for `createEntityStore`**: When `deepMerge: true` is enabled, `update` accepts `DeepPartial<T>`, allowing nested partial updates without needing type assertions.
-- **Export `DeepPartial<T>`**: Re-exported `DeepPartial` from the package entry point for custom helper reuse.
 - **Zustand middleware support**: Added a fully typed `middleware` option to `createEntitiesStore` and `createEntityStore` for Zustand middleware like `persist` and `devtools`. Options such as `partialize` receive the real store state type. `ZentyMiddleware<S>` is exported for reusable middleware.
-- **Exported store types**: `EntitiesStore`, `EntitiesStoreState`, `EntitiesState`, `EntitiesActions` and `EntityStoreState` are now exported. `EntitiesState` takes a single type parameter (`EntitiesState<T>`).
+- **New exports**: the `deepMerge` helper and the types `DeepPartial`, `ZentyMiddleware`, `EntitiesStore`, `EntitiesStoreState`, `EntitiesState`, `EntitiesActions`, `EntityStore`, `EntityStoreState`, `EntityState`, `EntityActions` and `EntityPatch` (1.0.x exported only the two store creators and their options types). `EntitiesState` takes a single type parameter (`EntitiesState<T>`).
 - **Missing ID reporting**: Calling `update` or `delete` with an ID that does not exist in the collection store now sets `error` (e.g. `"Item with id=<uid> was not found."`).
 - **Override exception handling**: Errors thrown inside custom CRUD operation overrides (`add`, `addMany`, `update`, `updateMany`, `delete`, `deleteMany`) are now caught and written to `error`, ending `loading` automatically.
 
@@ -37,9 +36,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `LICENSE`, removed a wrong `repository.directory`, and `prepublishOnly` now runs typecheck and tests too.
 - No `any` left in the source or the published type definitions; lint now fails on any warning.
 - Added `engines.node: >=18` and removed the unused `.npmignore` (`files` decides what ships).
-- Releases are published from GitHub Actions with npm provenance.
+- Releases are staged on npm from GitHub Actions via trusted publishing (with provenance) and go live after a maintainer approves them.
 
 ## [1.0.10] - 2026-06-12
 
 - Support for Zustand v5 and React 18/19.
-- Initial release with entity and entities store creators.
+
+Versions 1.0.0 (2025-07-01) to 1.0.9 predate this changelog.
