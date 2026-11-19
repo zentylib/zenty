@@ -95,7 +95,14 @@ jobs:
           @types/react@${{ matrix.react }} @types/react-dom@${{ matrix.react }}
           zustand@${{ matrix.zustand }}
 
-      - run: npx playwright install --with-deps chromium
+      - name: Install Chromium (retries on flaky downloads)
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "playwright install failed (attempt $attempt), retrying in 15s"
+            sleep 15
+          done
+          exit 1
       - run: npm run typecheck
       - run: npm run test:e2e
 
