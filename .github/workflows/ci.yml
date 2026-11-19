@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} / zustand ${{ matrix.zustand }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+        zustand: [4, 5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Use zustand ${{ matrix.zustand }}
+        if: matrix.zustand == 4
+        run: npm install --no-save zustand@4
+
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  install-check:
+    name: Install from tarball (React ${{ matrix.react }} / zustand ${{ matrix.zustand }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        react: [18, 19]
+        zustand: [4, 5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Install into a clean project and import it
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir consumer && cd consumer
+          npm init -y > /dev/null
+          npm install react@${{ matrix.react }} zustand@${{ matrix.zustand }} ../zenty-*.tgz
+          node --input-type=module -e "import { createEntitiesStore } from 'zenty'; const s = createEntitiesStore(); s.getState().add({ id: 1 }); if (s.getState().entities.length !== 1) process.exit(1); console.log('ESM ok')"
+          node -e "const { createEntityStore } = require('zenty'); const s = createEntityStore({ initialState: { a: 1 } }); if (!s.getState().loaded) process.exit(1); console.log('CJS ok')"
